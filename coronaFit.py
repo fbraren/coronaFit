@@ -3,6 +3,7 @@ import urllib.request as ur
 import matplotlib.pyplot as plt
 import os
 import datetime as dt
+from matplotlib.artist import setp
 
 def FindCountryIndex(country, fileContent):
 
@@ -56,6 +57,7 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 
     # Normalize observed data to population size
     xVals = list(data.keys())
     yVals = np.array(list(data.values()))
+    yVals2 = yVals.copy()
     yVals = yVals/nPeople
 
     # Setup directory for plotting output
@@ -66,26 +68,35 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 
     # Create model for best-fit exponential increase
     model, xValsExtended = CreatePredArray(fit, xVals, futureDays)
     # Normalize modeled case numbers to population size
+    model2 = model.copy()
     model = model/nPeople
 
     # Actual plotting
     fig, ax = plt.subplots()
+    ax2 = ax.twinx()
     ax.plot(xVals, yVals, 'ro', label='Observed')
     ax.plot(xValsExtended, model, 'b', label='Model')
+    ax2.plot(xVals, yVals2, 'ro', label='Observed')
+    ax2.plot(xValsExtended, model2, 'b', label='Model')
     ax.set_yscale('log')
-    ax.set_xlabel('Date')
+    ax2.set_yscale('log')
     if modeledQuantity == 'cases':
         yLabel = 'Diagnosed cases / population'
+        yLabel2 = 'Diagnosed cases'
     elif modeledQuantity == 'deaths':
         yLabel = ' Deaths / population'
+        yLabel2 = 'Deaths'
     else:
         'No valid quantity chosen'
         return
 
-    ax.set_ylabel('Diagnosed cases / population')
     degrees = 20
-    plt.xticks(rotation=degrees)
-    ax.tick_params(labelright=True, right = True)
+    plt.setp( ax.xaxis.get_majorticklabels(), rotation=degrees )
+    ax.set_xlabel('Date')
+    ax2.set_xlabel('Date')
+    ax.set_ylabel(yLabel)
+    ax2.set_ylabel(yLabel2)
+    ax2.tick_params(labelbottom=False, bottom = False)
     leg = ax.legend()
     plt.title(country)
 
@@ -113,65 +124,80 @@ def GetCSVFile(filename):
     ur.urlretrieve(url, filePath)
 
 # Choose whether diagnosed cases or deaths should be considered
-modeledQuantity = 'cases'
-#modeledQuantity = 'deaths'
-filename = 'total_{}.csv'.format(modeledQuantity)
+modeledQuantities = ['cases', 'deaths']
 
-# Download data from the European Centre for Disease Prevention and Control (ECDC)
-try:
-    GetCSVFile(filename)
-except:
-    print('No valid CSV file URL')
-    quit()
-else:
-    print('Got CSV file')
-
-# Read whole downloaded input file
-with open('data/{}'.format(filename), 'r') as infile:
-    fileCont = infile.readlines()
-
-# Which countries should be analyzed? If another country is added, an initial date and the population size for that country must be added as well below
-countryList = ['Germany', 'United States', 'Switzerland', 'Italy', 'South Africa']
-
-# How many days should the model be extrapolated into the future?
-extrapolatedDays = 7
-
-# Starting dates for the fit. Case number growth can change significantly, and by giving a more recent date, the current infection situation can be better modeled. To get an idea what to set for the date, choose an early value and look at the resulting plot.
-startDayMap  = {
-        'Germany' : dt.date(2020, 3, 2), 
-        'United States' : dt.date(2020, 3, 3), 
-        'Switzerland' : dt.date(2020, 3, 7),
-        'Italy' : dt.date(2020, 3, 1),
-        'South Africa' : dt.date(2020, 3, 10),
-        }
-
-# Population size; necessary for the normalization of case numbers to a rate
-nPeopleMap  = {
-        'Germany' : 8e7, 
-        'United States' : 3.25e8, 
-        'Switzerland' : 8.5e6,
-        'Italy' : 6e7,
-        'South Africa' : 6e7,
-        }
-
-# Loop over countries
-for country in countryList:
-
-    print("Run fit and plotting for {0}".format(country))
-
-    # Get the index in the CSV file for the country in question
-    countryIndex = FindCountryIndex(country, fileCont)
-
-    # Get a mapping from date to number of cases/deaths, starting at a given date
-    data = GetData(countryIndex, fileCont, startDayMap[country])
-
-    # Make dummy array for the x-axis in the fit
-    nConsideredDays = len(data)
-    dayArray = MakeDayArray(nConsideredDays)
-    # The actual fit of the log-values of the case numbers
-    fit = np.polyfit(dayArray, np.log(np.array(list(data.values()))), deg = 1) 
-
-    # Make a plot of the data and the modeled data. Can be extended in the future by choosing a 'futureDays' larger than 0
-    MakePlot(data, fit, country, extrapolatedDays, nPeopleMap[country], modeledQuantity)
+for modeledQuantity in modeledQuantities:
+    filename = 'total_{}.csv'.format(modeledQuantity)
+    
+    # Download data from the European Centre for Disease Prevention and Control (ECDC)
+    try:
+        GetCSVFile(filename)
+    except:
+        print('No valid CSV file URL')
+        quit()
+    else:
+        print('Got CSV file')
+    
+    # Read whole downloaded input file
+    with open('data/{}'.format(filename), 'r') as infile:
+        fileCont = infile.readlines()
+    
+    # Which countries should be analyzed? If another country is added, an initial date and the population size for that country must be added as well below
+    #countryList = ['Germany']
+    countryList = ['Germany', 'United States', 'Switzerland', 'Italy', 'South Africa']
+    
+    # How many days should the model be extrapolated into the future?
+    extrapolatedDays = 14
+    
+    # Starting dates for the fit. Case number growth can change significantly, and by giving a more recent date, the current infection situation can be better modeled. To get an idea what to set for the date, choose an early value and look at the resulting plot.
+    startDayMap = dict()
+    startDayMap['cases']  = {
+            #'Germany' : dt.date(2020, 3, 10), 
+            'Germany' : dt.date(2020, 3, 2), 
+            'United States' : dt.date(2020, 3, 3), 
+            'Switzerland' : dt.date(2020, 3, 7),
+            'Italy' : dt.date(2020, 3, 1),
+            'South Africa' : dt.date(2020, 3, 10),
+            }
+    startDayMap['deaths']  = {
+            'Germany' : dt.date(2020, 3, 10), 
+            'United States' : dt.date(2020, 3, 3), 
+            'Switzerland' : dt.date(2020, 3, 7),
+            'Italy' : dt.date(2020, 3, 1),
+            'South Africa' : dt.date(2020, 3, 10),
+            }
+    
+    
+    # Population size; necessary for the normalization of case numbers to a rate
+    nPeopleMap  = {
+            'Germany' : 8e7, 
+            'United States' : 3.25e8, 
+            'Switzerland' : 8.5e6,
+            'Italy' : 6e7,
+            'South Africa' : 6e7,
+            }
+    
+    # Loop over countries
+    for country in countryList:
+    
+        print("Run fit and plotting for {0}".format(country))
+    
+        # Get the index in the CSV file for the country in question
+        countryIndex = FindCountryIndex(country, fileCont)
+    
+        # Get a mapping from date to number of cases/deaths, starting at a given date
+        data = GetData(countryIndex, fileCont, startDayMap[modeledQuantity][country])
+    
+        # Make dummy array for the x-axis in the fit
+        nConsideredDays = len(data)
+        dayArray = MakeDayArray(nConsideredDays)
+        # The actual fit of the log-values of the case numbers
+        if np.count_nonzero(np.array(list(data.values()))) == 0:
+            print('No {0} for country {1}; skipping'.format(modeledQuantity, country))
+            continue
+        fit = np.polyfit(dayArray, np.log(np.array(list(data.values()))), deg = 1) 
+    
+        # Make a plot of the data and the modeled data. Can be extended in the future by choosing a 'futureDays' larger than 0
+        MakePlot(data, fit, country, extrapolatedDays, nPeopleMap[country], modeledQuantity)
 
 print('All done!')    
