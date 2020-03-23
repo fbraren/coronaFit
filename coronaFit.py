@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import datetime as dt
 from matplotlib.artist import setp
+import matplotlib.dates as mdates
 
 def FindCountryIndex(country, fileContent):
 
@@ -52,13 +53,15 @@ def CreatePredArray(fit, xVals, futureDays):
         arr = np.append(arr, Model((d - xValsExtended[0]).days, fit))
     return [arr, xValsExtended]
 
-def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 'cases'):
+def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 'cases', percent = False):
 
     # Normalize observed data to population size
     xVals = list(data.keys())
     yVals = np.array(list(data.values()))
     yVals2 = yVals.copy()
     yVals = yVals/nPeople
+    if percent:
+        yVals *= 100
 
     # Setup directory for plotting output
     plotPath = './plots'
@@ -70,6 +73,8 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 
     # Normalize modeled case numbers to population size
     model2 = model.copy()
     model = model/nPeople
+    if percent:
+        model *= 100
 
     # Actual plotting
     fig, ax = plt.subplots()
@@ -80,25 +85,26 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 
     ax2.plot(xValsExtended, model2, 'b', label='Model')
     ax.set_yscale('log')
     ax2.set_yscale('log')
+    percString = " [%]" if percent else ""
     if modeledQuantity == 'cases':
-        yLabel = 'Diagnosed cases / population'
+        yLabel = 'Diagnosed cases / population' + percString
         yLabel2 = 'Diagnosed cases'
     elif modeledQuantity == 'deaths':
-        yLabel = ' Deaths / population'
+        yLabel = ' Deaths / population' + percString
         yLabel2 = 'Deaths'
     else:
         'No valid quantity chosen'
         return
-
+    fig.subplots_adjust(bottom=0.15)
     degrees = 20
     plt.setp( ax.xaxis.get_majorticklabels(), rotation=degrees )
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b-%d"))
     ax.set_xlabel('Date')
-    ax2.set_xlabel('Date')
     ax.set_ylabel(yLabel)
     ax2.set_ylabel(yLabel2)
     ax2.tick_params(labelbottom=False, bottom = False)
-    leg = ax.legend()
-    plt.title(country)
+    plt.title("{0} in {1}".format(modeledQuantity.capitalize(), country))
+    leg = ax2.legend()
 
     plotFileName = 'plots/total_{1}_{0}.png'.format(country, modeledQuantity)
     fig.savefig(plotFileName)
@@ -148,6 +154,7 @@ for modeledQuantity in modeledQuantities:
     
     # How many days should the model be extrapolated into the future?
     extrapolatedDays = 14
+    showPercentage = False
     
     # Starting dates for the fit. Case number growth can change significantly, and by giving a more recent date, the current infection situation can be better modeled. To get an idea what to set for the date, choose an early value and look at the resulting plot.
     startDayMap = dict()
@@ -198,6 +205,6 @@ for modeledQuantity in modeledQuantities:
         fit = np.polyfit(dayArray, np.log(np.array(list(data.values()))), deg = 1) 
     
         # Make a plot of the data and the modeled data. Can be extended in the future by choosing a 'futureDays' larger than 0
-        MakePlot(data, fit, country, extrapolatedDays, nPeopleMap[country], modeledQuantity)
+        MakePlot(data, fit, country, extrapolatedDays, nPeopleMap[country], modeledQuantity, showPercentage)
 
 print('All done!')    
