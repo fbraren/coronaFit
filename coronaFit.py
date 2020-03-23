@@ -156,14 +156,14 @@ for modeledQuantity in modeledQuantities:
             'Germany' : dt.date(2020, 3, 2), 
             'United States' : dt.date(2020, 3, 3), 
             'Switzerland' : dt.date(2020, 3, 7),
-            'Italy' : dt.date(2020, 3, 1),
+            'Italy' : dt.date(2020, 3, 10),
             'South Africa' : dt.date(2020, 3, 10),
             }
     startDayMap['deaths']  = {
             'Germany' : dt.date(2020, 3, 10), 
             'United States' : dt.date(2020, 3, 3), 
             'Switzerland' : dt.date(2020, 3, 7),
-            'Italy' : dt.date(2020, 3, 1),
+            'Italy' : dt.date(2020, 3, 13),
             'South Africa' : dt.date(2020, 3, 10),
             }
     
