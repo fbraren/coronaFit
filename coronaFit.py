@@ -51,7 +51,7 @@ def CreatePredArray(fit, xVals, futureDays):
         arr = np.append(arr, Model((d - xValsExtended[0]).days, fit))
     return [arr, xValsExtended]
 
-def MakePlot(data, fit, country, futureDays = 0, nPeople = 1):
+def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 'cases'):
 
     # Normalize observed data to population size
     xVals = list(data.keys())
@@ -74,6 +74,14 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1):
     ax.plot(xValsExtended, model, 'b', label='Model')
     ax.set_yscale('log')
     ax.set_xlabel('Date')
+    if modeledQuantity == 'cases':
+        yLabel = 'Diagnosed cases / population'
+    elif modeledQuantity == 'deaths':
+        yLabel = ' Deaths / population'
+    else:
+        'No valid quantity chosen'
+        return
+
     ax.set_ylabel('Diagnosed cases / population')
     degrees = 20
     plt.xticks(rotation=degrees)
@@ -81,7 +89,7 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1):
     leg = ax.legend()
     plt.title(country)
 
-    plotFileName = 'plots/totalCases_{0}.png'.format(country)
+    plotFileName = 'plots/total_{1}_{0}.png'.format(country, modeledQuantity)
     fig.savefig(plotFileName)
     print('Saved plot for {0}: {1}\n'.format(country, plotFileName))
 
@@ -104,12 +112,19 @@ def GetCSVFile(filename):
     url = 'https://covid.ourworldindata.org/data/ecdc/{}'.format(filename)
     ur.urlretrieve(url, filePath)
 
-# Choose whether diagnosed cases ('total_cases') or deaths ('total_deaths') should be considered
-filename = 'total_cases.csv'
-#filename = 'total_deaths.csv'
+# Choose whether diagnosed cases or deaths should be considered
+modeledQuantity = 'cases'
+#modeledQuantity = 'deaths'
+filename = 'total_{}.csv'.format(modeledQuantity)
 
 # Download data from the European Centre for Disease Prevention and Control (ECDC)
-GetCSVFile(filename)
+try:
+    GetCSVFile(filename)
+except:
+    print('No valid CSV file URL')
+    quit()
+else:
+    print('Got CSV file')
 
 # Read whole downloaded input file
 with open('data/{}'.format(filename), 'r') as infile:
@@ -157,6 +172,6 @@ for country in countryList:
     fit = np.polyfit(dayArray, np.log(np.array(list(data.values()))), deg = 1) 
 
     # Make a plot of the data and the modeled data. Can be extended in the future by choosing a 'futureDays' larger than 0
-    MakePlot(data, fit, country, futureDays = extrapolatedDays, nPeople = nPeopleMap[country])
+    MakePlot(data, fit, country, extrapolatedDays, nPeopleMap[country], modeledQuantity)
 
 print('All done!')    
