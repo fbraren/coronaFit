@@ -118,6 +118,9 @@ with open('data/{}'.format(filename), 'r') as infile:
 # Which countries should be analyzed? If another country is added, an initial date and the population size for that country must be added as well below
 countryList = ['Germany', 'United States', 'Switzerland', 'Italy', 'South Africa']
 
+# How many days should the model be extrapolated into the future?
+extrapolatedDays = 7
+
 # Starting dates for the fit. Case number growth can change significantly, and by giving a more recent date, the current infection situation can be better modeled. To get an idea what to set for the date, choose an early value and look at the resulting plot.
 startDayMap  = {
         'Germany' : dt.date(2020, 3, 2), 
@@ -154,5 +157,6 @@ for country in countryList:
     fit = np.polyfit(dayArray, np.log(np.array(list(data.values()))), deg = 1) 
 
     # Make a plot of the data and the modeled data. Can be extended in the future by choosing a 'futureDays' larger than 0
-    MakePlot(data, fit, country, futureDays = 7, nPeople = nPeopleMap[country])
+    MakePlot(data, fit, country, futureDays = extrapolatedDays, nPeople = nPeopleMap[country])
+
 print('All done!')    
