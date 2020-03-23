@@ -28,7 +28,6 @@ def GetData(index, fileContent, startDate):
         if day < startDate:
             continue
         dayContent = lineVec[index]
-        print(day, dayContent)
         if dayContent == '':
             dayContent = dataMap[day - dt.timedelta(days = 1)]
         dataMap[day] = int(dayContent)
@@ -78,7 +77,9 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1):
     leg = ax.legend()
     plt.title(country)
     fig.show()
-    fig.savefig('plots/totalCases_{0}.png'.format(country))
+    plotFileName = 'plots/totalCases_{0}.png'.format(country)
+    fig.savefig(plotFileName)
+    print('Saved plot for {0}: {1}\n'.format(country, plotFileName))
 
 def MakeDayArray(n):
     arr = np.array([])
@@ -128,6 +129,7 @@ nPeopleMap  = {
 
 # Loop over countries
 for country in countryList:
+    print("Run fit and plotting for {0}".format(country))
     # Get the index in the CSV file for the country in question
     countryIndex = FindCountryIndex(country, fileCont)
     # Get a mapping from date to number of cases/deaths, starting at a given date
