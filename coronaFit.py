@@ -5,6 +5,7 @@ import os
 import datetime as dt
 
 def FindCountryIndex(country, fileContent):
+
     # Find the index for the column in the CSV file relevant for the considered country
     fcZero = fileContent[0].split(',')
     countryIndex = -1
@@ -16,6 +17,7 @@ def FindCountryIndex(country, fileContent):
     return countryIndex
 
 def GetData(index, fileContent, startDate):
+
     # Read the whole CSV file, split it, and make a mapping of dates to case numbers for the country in consideration, as indicated by the index. Ignore dates before 'startDate'.
     dataMap = dict()
     for i in range(1, len(fileContent)):
@@ -34,10 +36,12 @@ def GetData(index, fileContent, startDate):
     return dataMap
 
 def Model(day, fit):
+
     # Simple exponential model, taking as arguments the slope and ordinate of the log-value distribution
     return np.exp(fit[0] * day + fit[1])
 
 def CreatePredArray(fit, xVals, futureDays):
+
     #Create arrays for the dates and predictions in the considered timespan
     xValsExtended = xVals[:]
     for i in range(futureDays):
@@ -76,22 +80,26 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1):
     ax.tick_params(labelright=True, right = True)
     leg = ax.legend()
     plt.title(country)
-    fig.show()
+
     plotFileName = 'plots/totalCases_{0}.png'.format(country)
     fig.savefig(plotFileName)
     print('Saved plot for {0}: {1}\n'.format(country, plotFileName))
 
 def MakeDayArray(n):
+    # Used to create a dummy day array for the fit
+
     arr = np.array([])
     for i in range(n):
         arr = np.append(arr, i)
     return arr
 
 def GetCSVFile(filename):
+
     # Retrieve CSV file from internet and save it to directory
     dataPath = './data'
     if not os.path.exists(dataPath):
         os.mkdir(dataPath)
+
     filePath = './data/{}'.format(filename)
     url = 'https://covid.ourworldindata.org/data/ecdc/{}'.format(filename)
     ur.urlretrieve(url, filePath)
@@ -104,12 +112,12 @@ filename = 'total_cases.csv'
 GetCSVFile(filename)
 
 # Read whole downloaded input file
-infile = open('data/{}'.format(filename), 'r')
-fileCont = infile.readlines()
-infile.close()
+with open('data/{}'.format(filename), 'r') as infile:
+    fileCont = infile.readlines()
 
 # Which countries should be analyzed? If another country is added, an initial date and the population size for that country must be added as well below
 countryList = ['Germany', 'United States', 'Switzerland', 'Italy', 'South Africa']
+
 # Starting dates for the fit. Case number growth can change significantly, and by giving a more recent date, the current infection situation can be better modeled. To get an idea what to set for the date, choose an early value and look at the resulting plot.
 startDayMap  = {
         'Germany' : dt.date(2020, 3, 2), 
@@ -118,6 +126,7 @@ startDayMap  = {
         'Italy' : dt.date(2020, 3, 1),
         'South Africa' : dt.date(2020, 3, 10),
         }
+
 # Population size; necessary for the normalization of case numbers to a rate
 nPeopleMap  = {
         'Germany' : 8e7, 
@@ -129,16 +138,21 @@ nPeopleMap  = {
 
 # Loop over countries
 for country in countryList:
+
     print("Run fit and plotting for {0}".format(country))
+
     # Get the index in the CSV file for the country in question
     countryIndex = FindCountryIndex(country, fileCont)
+
     # Get a mapping from date to number of cases/deaths, starting at a given date
     data = GetData(countryIndex, fileCont, startDayMap[country])
+
     # Make dummy array for the x-axis in the fit
     nConsideredDays = len(data)
     dayArray = MakeDayArray(nConsideredDays)
     # The actual fit of the log-values of the case numbers
     fit = np.polyfit(dayArray, np.log(np.array(list(data.values()))), deg = 1) 
+
     # Make a plot of the data and the modeled data. Can be extended in the future by choosing a 'futureDays' larger than 0
     MakePlot(data, fit, country, futureDays = 7, nPeople = nPeopleMap[country])
-    
+print('All done!')    
