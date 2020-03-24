@@ -53,7 +53,21 @@ def CreatePredArray(fit, xVals, futureDays):
         arr = np.append(arr, Model((d - xValsExtended[0]).days, fit))
     return [arr, xValsExtended]
 
+def GetLimitDay(model, limit, startDay):
+    dayLimit = -1
+    counter = 0
+    while dayLimit < 0:
+        if model[startDay + counter] > limit:
+            dayLimit = counter
+        counter += 1
+    return dayLimit
+
+
+
 def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 'cases', percent = False):
+    dDouble = np.log(2)/fit[0]
+    print(dDouble)
+    textDouble = 'Doubling in {0:.1f} days'.format(dDouble)
 
     # Normalize observed data to population size
     xVals = list(data.keys())
@@ -70,15 +84,25 @@ def MakePlot(data, fit, country, futureDays = 0, nPeople = 1, modeledQuantity = 
 
     # Create model for best-fit exponential increase
     model, xValsExtended = CreatePredArray(fit, xVals, futureDays)
+    #Hack to estimate the number of days until a certain population fraction is infected/dead. At current rates and for a fraction of 1%, 200 days should suffice
+    model_extreme, xValsExtended_extreme = CreatePredArray(fit, xVals, futureDays = 200)
     # Normalize modeled case numbers to population size
     model2 = model.copy()
     model = model/nPeople
+
+    model_extreme = model_extreme/nPeople
+    # len(xVals) = offset for making result relative to last data point
+    day_1percAffected = GetLimitDay(model_extreme, limit = 0.01, startDay = len(xVals))
+
     if percent:
         model *= 100
 
     # Actual plotting
     fig, ax = plt.subplots()
     ax2 = ax.twinx()
+    #ax2.text(0.3, 0, 0.4, text = textDouble, color='black', fontsize=15)
+    plt.annotate(textDouble, xy=(0.65, 0.05), xycoords='axes fraction')
+    plt.annotate("{} days until 1 %".format(day_1percAffected), xy=(0.65, 0.15), xycoords='axes fraction')
     ax.plot(xVals, yVals, 'ro', label='Observed')
     ax.plot(xValsExtended, model, 'b', label='Model')
     ax2.plot(xVals, yVals2, 'ro', label='Observed')
@@ -150,28 +174,29 @@ for modeledQuantity in modeledQuantities:
     
     # Which countries should be analyzed? If another country is added, an initial date and the population size for that country must be added as well below
     #countryList = ['Germany']
-    countryList = ['Germany', 'United States', 'Switzerland', 'Italy', 'South Africa']
+    countryList = ['Germany', 'United States', 'Switzerland', 'Italy', 'South Africa', 'Brazil']
     
     # How many days should the model be extrapolated into the future?
-    extrapolatedDays = 14
+    extrapolatedDays = 7
     showPercentage = False
     
     # Starting dates for the fit. Case number growth can change significantly, and by giving a more recent date, the current infection situation can be better modeled. To get an idea what to set for the date, choose an early value and look at the resulting plot.
     startDayMap = dict()
     startDayMap['cases']  = {
-            #'Germany' : dt.date(2020, 3, 10), 
             'Germany' : dt.date(2020, 3, 2), 
             'United States' : dt.date(2020, 3, 3), 
             'Switzerland' : dt.date(2020, 3, 7),
             'Italy' : dt.date(2020, 3, 10),
             'South Africa' : dt.date(2020, 3, 10),
+            'Brazil' : dt.date(2020, 3, 15),
             }
     startDayMap['deaths']  = {
             'Germany' : dt.date(2020, 3, 10), 
-            'United States' : dt.date(2020, 3, 3), 
+            'United States' : dt.date(2020, 3, 17), 
             'Switzerland' : dt.date(2020, 3, 7),
             'Italy' : dt.date(2020, 3, 13),
             'South Africa' : dt.date(2020, 3, 10),
+            'Brazil' : dt.date(2020, 3, 19),
             }
     
     
@@ -182,6 +207,7 @@ for modeledQuantity in modeledQuantities:
             'Switzerland' : 8.5e6,
             'Italy' : 6e7,
             'South Africa' : 6e7,
+            'Brazil' : 2.1e8,
             }
     
     # Loop over countries
